@@ -1,12 +1,37 @@
 
 module Cirru
 ( CirruValue(..)
+, CirruState(..)
+, CrValue(..)
+, CirruBuffer(..)
 , appendItem
 , resolveDollar
 , resolveComma
 ) where
 
-data CirruValue = CirruList [CirruValue] | CirruString String deriving Show
+data CirruBuffer = CirruBuffer { bText :: String
+                               , bX    :: Integer
+                               , bY    :: Integer
+                               }
+
+data CrValue = CrList [CrValue] | CrString String deriving Show
+data CirruValue = CirruList [CirruValue] | CirruToken { tText :: String
+                                                      , tX    :: Integer
+                                                      , tY    :: Integer
+                                                      , tEx   :: Integer
+                                                      , tEy   :: Integer
+                                                      , tPath :: String
+                                                      } deriving Show
+
+data CirruState = CirruState { sName     :: String
+                             , sX        :: Integer
+                             , sY        :: Integer
+                             , sLevel    :: Integer
+                             , sIndent   :: Integer
+                             , sIndented :: Integer
+                             , sNest     :: Integer
+                             , sPath     :: String
+                             }
 
 appendItem :: CirruValue -> Integer -> CirruValue -> CirruValue
 appendItem (CirruList xs) 0 x = CirruList (xs ++ [x])
@@ -28,12 +53,11 @@ repeatDollar (CirruList before) (CirruList after) =
     (CirruList cursor) ->
       repeatDollar (CirruList (before ++ newCursor)) (CirruList (tail after))
       where (CirruList newCursor) = resolveDollar (CirruList cursor)
-    (CirruString "$") ->
+    (CirruToken "$" _ _ _ _ _) ->
       CirruList (before ++ newAfter)
       where (CirruList newAfter) = resolveDollar (CirruList after)
-    (CirruString s) ->
-      repeatDollar (CirruList (before ++ [newS])) (CirruList (tail after))
-      where newS = CirruString s
+    (CirruToken s _ _ _ _ _) ->
+      repeatDollar (CirruList (before ++ [head after])) (CirruList (tail after))
 
 resolveDollar :: CirruValue -> CirruValue
 resolveDollar (CirruList []) = (CirruList [])
@@ -43,18 +67,17 @@ repeatComma :: CirruValue -> CirruValue -> CirruValue
 repeatComma (CirruList xs) (CirruList []) = (CirruList xs)
 repeatComma (CirruList before) (CirruList after) =
   case (head after) of
-    (CirruString s) ->
-      repeatComma (CirruList (before ++ [newS])) (CirruList (tail after))
-      where newS = CirruString s
+    (CirruToken _ _ _ _ _ _) ->
+      repeatComma (CirruList (before ++ [head after])) (CirruList (tail after))
     (CirruList cursor) ->
       case (head cursor) of
         (CirruList xs) ->
           repeatComma (CirruList (before ++ newCursor)) (CirruList (tail after))
           where (CirruList newCursor) = resolveComma (CirruList cursor)
-        (CirruString ",") ->
+        (CirruToken "," _ _ _ _ _) ->
           repeatComma (CirruList before) (CirruList (newCursor ++ (tail after)))
           where (CirruList newCursor) = resolveComma (CirruList (tail cursor))
-        (CirruString s) ->
+        (CirruToken _ _ _ _ _ _) ->
           repeatComma (CirruList (before ++ newCursor)) (CirruList (tail after))
           where (CirruList newCursor) = resolveComma (CirruList cursor)
 

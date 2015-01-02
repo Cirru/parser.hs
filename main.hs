@@ -1,11 +1,12 @@
 
 import Cirru
+import Parser
 
 emptyCirruList :: CirruValue
 emptyCirruList = CirruList []
 
 a :: CirruValue
-a = CirruString "demo"
+a = CirruToken "" 0 0 0 0 ""
 
 b :: CirruValue
 b = CirruList []
