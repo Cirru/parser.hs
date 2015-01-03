@@ -17,7 +17,7 @@ parse code filename =
   parseState emptyList buffer startState code
   where
     buffer = CirruBuffer "" 1 1
-    startState = CirruState "indent" 0 0 1 0 0 0 filename
+    startState = CirruState "indent" 1 1 1 0 0 0 filename
 
 
 cr :: CirruValue -> CrValue
@@ -67,13 +67,13 @@ parseState xs buffer state code =
           (')') ->  tokenClose   xs buffer state code
           ('"') ->  tokenQuote   xs buffer state code
           _ ->      tokenElse    xs buffer state code
-      -- indent
-      _ ->
+      ("indent") ->
         case (head code) of
           (' ') ->  indentSpace   xs buffer state code
           ('\n') -> indentNewline xs buffer state code
           (')') ->  indentClose   xs buffer state code
           _ ->      indentElse    xs buffer state code
+      _ -> error ("unknown state: " ++ (sName state))
 
 escapeEof xs buffer state code = error "EOF in escape state"
 
@@ -84,7 +84,7 @@ spaceEof xs buffer state code = xs
 tokenEof xs b s code =
   let newToken = CirruToken (bText b) (bX b) (bY b) (sX s) (sY s) (sPath s)
       newXs = appendItem xs (sLevel s) newToken
-  in xs
+  in newXs
 
 indentEof xs buffer state code = xs
 
@@ -118,13 +118,13 @@ stringQuote xs b s code =
   in parseState xs b newState (tail code)
 
 stringElse xs b s code =
-  let newState = CirruState (bText b) ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  let newState = CirruState (sName s) ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
       newBuffer = CirruBuffer ((bText b) ++ [head code]) (bX b) (bY b)
   in parseState xs newBuffer newState (tail code)
 
 spaceSpace xs b s code =
-  let newState = CirruState (bText b) ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
-  in parseState xs b s (tail code)
+  let newState = CirruState (sName s) ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  in parseState xs b newState (tail code)
 
 spaceNewline xs b s code =
   if (mod (sNest s) 2) == 1
@@ -160,13 +160,13 @@ tokenSpace xs b s code =
   let newState = CirruState "space" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
       newToken = CirruToken (bText b) (bX b) (bY b) (sX s) (sY s) (sPath s)
       newXs = appendItem xs (sLevel s) newToken
-  in parseState xs b newState (tail code)
+  in parseState newXs b newState (tail code)
 
 tokenNewline xs b s code =
   let newState = CirruState "indent" 1 ((sY s)+1) (sLevel s) (sIndent s) 0 (sNest s) (sPath s)
       newToken = CirruToken (bText b) (bX b) (bY b) (sX s) (sY s) (sPath s)
       newXs = appendItem xs (sLevel s) newToken
-  in parseState xs b newState (tail code)
+  in parseState newXs b newState (tail code)
 
 tokenOpen xs buffer state code = error "open parenthesis in token"
 
@@ -174,14 +174,14 @@ tokenClose xs b s code =
   let newState = CirruState "space" (sX s) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
       newToken = CirruToken (bText b) (bX b) (bY b) (sX s) (sY s) (sPath s)
       newXs = appendItem xs (sLevel s) newToken
-  in parseState xs b newState (tail code)
+  in parseState newXs b newState code
 
 tokenQuote xs b s code =
   let newState = CirruState "string" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
   in parseState xs b newState (tail code)
 
 tokenElse xs b s code =
-  let newState = CirruState "string" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  let newState = CirruState (sName s) ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
       newBuffer = CirruBuffer ((bText b) ++ [head code]) ((sX s)+1) (sY s)
   in parseState xs newBuffer newState (tail code)
 
@@ -190,14 +190,14 @@ indentSpace xs b s code =
   in parseState xs b newState (tail code)
 
 indentNewline xs b s code =
-  let newState = CirruState (sName s) 1 ((sY s)+1) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  let newState = CirruState (sName s) 1 ((sY s)+1) (sLevel s) (sIndent s) 0 (sNest s) (sPath s)
   in parseState xs b newState (tail code)
 
 indentClose xs buffer state code = error "close parenthesis at indent"
 
 indentElse xs b s code =
   if (mod (sIndented s) 2) == 1
-    then error "odd indentation"
+    then error ("odd indentation: " ++ (show (sIndented s)))
     else
       let indented = div (sIndented s) 2
           diff = indented - (sIndent s)
@@ -212,6 +212,6 @@ indentElse xs b s code =
           if diff > 0
             then
               let newXs = appendItem xs (sLevel s) nesting
-              in parseState newXs b s code
+              in parseState newXs b newState code
             else
               parseState xs b newState code

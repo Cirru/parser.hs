@@ -2,9 +2,9 @@
 import Cirru
 import Parser
 
-fileName = "./cirru/spaces.cirru"
+fileName = "./cirru/line.cirru"
 
 main :: IO()
 main = do
   code <- readFile fileName
-  putStrLn (show $ parse code fileName)
+  putStrLn (show $ resolveComma (parse code fileName))

@@ -72,7 +72,7 @@ repeatComma (CirruList before) (CirruList after) =
       repeatComma (CirruList (before ++ [head after])) (CirruList (tail after))
     (CirruList cursor) ->
       case (head cursor) of
-        (CirruList xs) ->
+        (CirruList _) ->
           repeatComma (CirruList (before ++ newCursor)) (CirruList (tail after))
           where (CirruList newCursor) = resolveComma (CirruList cursor)
         (CirruToken "," _ _ _ _ _) ->
