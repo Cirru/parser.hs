@@ -27,6 +27,7 @@ cr (CirruList xs) = CrList (map cr xs)
 pare :: String -> String -> CrValue
 pare code filename = cr (parse code filename)
 
+newState x = x
 
 parseState :: CirruValue -> CirruBuffer -> CirruState -> String -> CirruValue
 parseState xs buffer state code =
@@ -54,10 +55,10 @@ parseState xs buffer state code =
         case (head code) of
           (' ')  -> spaceSpace   xs buffer state code
           ('\n') -> spaceNewline xs buffer state code
-          ('(')  -> stateOpen    xs buffer state code
-          (')')  -> stateClose   xs buffer state code
-          ('"')  -> stateQuote   xs buffer state code
-          _      -> stateElse    xs buffer state code
+          ('(')  -> spaceOpen    xs buffer state code
+          (')')  -> spaceClose   xs buffer state code
+          ('"')  -> spaceQuote   xs buffer state code
+          _      -> spaceElse    xs buffer state code
       ("token") ->
         case (head code) of
           (' ') ->  tokenSpace   xs buffer state code
@@ -89,55 +90,127 @@ indentEof xs buffer state code = xs
 
 escapeNewline xs buffer state code = error "new line while escape"
 
+escapeN :: CirruValue -> CirruBuffer -> CirruState -> String -> CirruValue
 escapeN xs b s code =
-  let newState = CirruState "string" ((sX s) + 1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  let newState = CirruState "string" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
       newBuffer = CirruBuffer ((bText b) ++ "\n") (bX b) (bY b)
   in parseState xs newBuffer newState (tail code)
 
-escapeT xs buffer state code = emptyList
+escapeT xs b s code =
+  let newState = CirruState "string" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+      newBuffer = CirruBuffer ((bText b) ++ "\t") (bX b) (bY b)
+  in parseState xs newBuffer newState (tail code)
 
-escapeElse xs buffer state code = emptyList
+escapeElse xs b s code =
+  let newState = CirruState "string" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+      newBuffer = CirruBuffer ((bText b) ++ [head code]) (bX b) (bY b)
+  in parseState xs newBuffer newState (tail code)
 
+stringBackslash xs b s code =
+  let newState = CirruState "escape" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  in parseState xs b newState (tail code)
 
-stringBackslash xs buffer state code = emptyList
+stringNewline xs buffer state code = error "newline in a string"
 
-stringNewline xs buffer state code = emptyList
+stringQuote xs b s code =
+  let newState = CirruState "token" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  in parseState xs b newState (tail code)
 
-stringQuote xs buffer state code = emptyList
+stringElse xs b s code =
+  let newState = CirruState (bText b) ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+      newBuffer = CirruBuffer ((bText b) ++ [head code]) (bX b) (bY b)
+  in parseState xs newBuffer newState (tail code)
 
-stringElse xs buffer state code = emptyList
+spaceSpace xs b s code =
+  let newState = CirruState (bText b) ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  in parseState xs b s (tail code)
 
+spaceNewline xs b s code =
+  if (mod (sNest s) 2) == 1
+    then error "incorrect nesting"
+    else
+      let newState = CirruState "indent" 1 ((sY s)+1) (sLevel s) (sIndent s) 0 (sNest s) (sPath s)
+      in parseState xs b newState (tail code)
 
-spaceSpace xs buffer state code = emptyList
+spaceOpen xs b s code =
+  let nesting = createNesting 1
+      newXs = appendItem xs (sLevel s) nesting
+      newState = CirruState (sName s) ((sX s)+1) (sY s) ((sLevel s)+1) (sIndent s) (sIndented s) ((sNest s)+1) (sPath s)
+  in parseState newXs b newState (tail code)
 
-spaceNewline xs buffer state code = emptyList
+spaceClose xs b s code =
+  if ((sNest s) < 1)
+    then error "close at space"
+    else
+      let newState = CirruState (sName s) ((sX s)+1) (sY s) ((sLevel s)-1) (sIndent s) (sIndented s) ((sNest s)-1) (sPath s)
+      in parseState xs b newState (tail code)
 
-stateOpen xs buffer state code = emptyList
+spaceQuote xs b s code =
+  let newState = CirruState "string" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+      newBuffer = CirruBuffer "" (sX s) (sY s)
+  in parseState xs newBuffer newState (tail code)
 
-stateClose xs buffer state code = emptyList
+spaceElse xs b s code =
+  let newState = CirruState "token" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+      newBuffer = CirruBuffer [head code] (sX s) (sY s)
+  in parseState xs newBuffer newState (tail code)
 
-stateQuote xs buffer state code = emptyList
+tokenSpace xs b s code =
+  let newState = CirruState "space" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+      newToken = CirruToken (bText b) (bX b) (bY b) (sX s) (sY s) (sPath s)
+      newXs = appendItem xs (sLevel s) newToken
+  in parseState xs b newState (tail code)
 
-stateElse xs buffer state code = emptyList
+tokenNewline xs b s code =
+  let newState = CirruState "indent" 1 ((sY s)+1) (sLevel s) (sIndent s) 0 (sNest s) (sPath s)
+      newToken = CirruToken (bText b) (bX b) (bY b) (sX s) (sY s) (sPath s)
+      newXs = appendItem xs (sLevel s) newToken
+  in parseState xs b newState (tail code)
 
+tokenOpen xs buffer state code = error "open parenthesis in token"
 
-tokenSpace xs buffer state code = emptyList
+tokenClose xs b s code =
+  let newState = CirruState "space" (sX s) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+      newToken = CirruToken (bText b) (bX b) (bY b) (sX s) (sY s) (sPath s)
+      newXs = appendItem xs (sLevel s) newToken
+  in parseState xs b newState (tail code)
 
-tokenNewline xs buffer state code = emptyList
+tokenQuote xs b s code =
+  let newState = CirruState "string" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  in parseState xs b newState (tail code)
 
-tokenOpen xs buffer state code = emptyList
+tokenElse xs b s code =
+  let newState = CirruState "string" ((sX s)+1) (sY s) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+      newBuffer = CirruBuffer ((bText b) ++ [head code]) ((sX s)+1) (sY s)
+  in parseState xs newBuffer newState (tail code)
 
-tokenClose xs buffer state code = emptyList
+indentSpace xs b s code =
+  let newState = CirruState (sName s) ((sX s)+1) (sY s) (sLevel s) (sIndent s) ((sIndented s)+1) (sNest s) (sPath s)
+  in parseState xs b newState (tail code)
 
-tokenQuote xs buffer state code = emptyList
+indentNewline xs b s code =
+  let newState = CirruState (sName s) 1 ((sY s)+1) (sLevel s) (sIndent s) (sIndented s) (sNest s) (sPath s)
+  in parseState xs b newState (tail code)
 
-tokenElse xs buffer state code = emptyList
+indentClose xs buffer state code = error "close parenthesis at indent"
 
-
-indentSpace xs buffer state code = emptyList
-
-indentNewline xs buffer state code = emptyList
-
-indentClose xs buffer state code = emptyList
-
-indentElse xs buffer state code = emptyList
+indentElse xs b s code =
+  if (mod (sIndented s) 2) == 1
+    then error "odd indentation"
+    else
+      let indented = div (sIndented s) 2
+          diff = indented - (sIndent s)
+          nesting = createNesting 1
+          newState = CirruState "space" (sX s) (sY s) ((sLevel s)+diff) indented (sIndented s) (sNest s) (sPath s)
+      in
+        if diff <= 0
+          then
+            let newXs = appendItem xs ((sLevel s) + diff - 1) nesting
+            in parseState newXs b newState code
+        else
+          if diff > 0
+            then
+              let newXs = appendItem xs (sLevel s) nesting
+              in parseState newXs b s code
+            else
+              parseState xs b newState code

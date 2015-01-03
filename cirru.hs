@@ -4,6 +4,7 @@ module Cirru
 , CirruState(..)
 , CrValue(..)
 , CirruBuffer(..)
+, createNesting
 , appendItem
 , resolveDollar
 , resolveComma
