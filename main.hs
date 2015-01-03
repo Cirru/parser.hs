@@ -2,22 +2,9 @@
 import Cirru
 import Parser
 
-emptyCirruList :: CirruValue
-emptyCirruList = CirruList []
-
-a :: CirruValue
-a = CirruToken "" 0 0 0 0 ""
-
-b :: CirruValue
-b = CirruList []
-
-c :: CirruValue
-c = appendItem emptyCirruList 0 b
-
-d :: CirruValue
-d = appendItem c 1 a
+fileName = "./cirru/spaces.cirru"
 
 main :: IO()
 main = do
-  putStrLn (show $ c)
-  putStrLn (show $ d)
+  code <- readFile fileName
+  putStrLn (show $ parse code fileName)

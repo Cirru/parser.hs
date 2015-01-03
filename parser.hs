@@ -67,7 +67,8 @@ parseState xs buffer state code =
           (')') ->  tokenClose   xs buffer state code
           ('"') ->  tokenQuote   xs buffer state code
           _ ->      tokenElse    xs buffer state code
-      ("indent") ->
+      -- indent
+      _ ->
         case (head code) of
           (' ') ->  indentSpace   xs buffer state code
           ('\n') -> indentNewline xs buffer state code
