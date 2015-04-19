@@ -5,6 +5,7 @@ module Parser
 ) where
 
 import Cirru
+import Debug.Trace
 
 isEmpty :: String -> Bool
 isEmpty [] = True
@@ -28,6 +29,13 @@ pare :: String -> String -> CrValue
 pare code filename = cr (parse code filename)
 
 newState x = x
+
+log2 :: CirruValue -> CirruBuffer -> CirruState -> String -> String
+log2 xs buffer state code = "\nstate:\t" ++ (show state) ++ "\ncode:\t" ++ (show code)
+  ++ "\nxs:\t" ++ (show xs) ++ "\nbuffer:\t" ++ (show buffer)
+
+parseState2 :: CirruValue -> CirruBuffer -> CirruState -> String -> CirruValue
+parseState2 xs buffer state code = trace (log2 xs buffer state code) $ parseState xs buffer state code
 
 parseState :: CirruValue -> CirruBuffer -> CirruState -> String -> CirruValue
 parseState xs buffer state code =

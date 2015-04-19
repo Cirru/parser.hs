@@ -2,9 +2,10 @@
 import Cirru
 import Parser
 
-fileName = "./cirru/line.cirru"
+fileName = "./cirru/unfolding.cirru"
 
 main :: IO()
 main = do
   code <- readFile fileName
-  putStrLn (show $ resolveComma (parse code fileName))
+  putStrLn (show $ resolveComma $ resolveDollar (parse code fileName))
+  --putStrLn (show (parse code fileName))

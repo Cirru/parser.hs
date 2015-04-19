@@ -4,12 +4,7 @@ Cirru Parser in Haskell
 
 Reimplement Cirru Parser in Haskell.
 
-This repo is not currently accomplished due to this:
-
-```
-➤➤ runghc main.hs
-main.hs: Prelude.head: empty list
-```
+This is not yet a valiad package. I fix this later.
 
 ### License
 
