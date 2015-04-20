@@ -4,7 +4,7 @@ Cirru Parser in Haskell
 
 Reimplement Cirru Parser in Haskell.
 
-This is not yet a valiad package. I fix this later.
+Haskell is Lazy, so there's a problem transforming comma notations.
 
 ### License
 
