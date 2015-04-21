@@ -4,7 +4,15 @@ Cirru Parser in Haskell
 
 Reimplement Cirru Parser in Haskell.
 
-Haskell is Lazy, so there's a problem transforming comma notations.
+Code is now OK, but I have to make it a package...
+
+Test:
+
+```bash
+runghc main.hs
+cirru-script pretty.cirru
+cirru-script compare.cirru
+```
 
 ### License
 

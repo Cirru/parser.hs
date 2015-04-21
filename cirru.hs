@@ -90,7 +90,7 @@ resolveDollar (CirruList xs) = repeatDollar (CirruList []) (CirruList xs)
 repeatComma :: CirruValue -> CirruValue -> CirruValue
 repeatComma (CirruList xs) (CirruList []) = (CirruList xs)
 repeatComma (CirruList before) (CirruList after) =
-  trace ((show before) ++ " - " ++ (show after)) $ if (length after) == 0
+  if (length after) == 0
     then CirruList before
     else case (head after) of
       (CirruToken _ _ _ _ _ _) ->
@@ -103,7 +103,7 @@ repeatComma (CirruList before) (CirruList after) =
               repeatComma (CirruList (before ++ [CirruList newCursor])) (CirruList (tail after))
               where (CirruList newCursor) = resolveComma (CirruList cursor)
             (CirruToken "," _ _ _ _ _) ->
-              repeatComma (CirruList before) (CirruList ([CirruList newCursor] ++ (tail after)))
+              repeatComma (CirruList before) (CirruList (newCursor ++ (tail after)))
               where (CirruList newCursor) = resolveComma (CirruList (tail cursor))
             (CirruToken _ _ _ _ _ _) ->
               repeatComma (CirruList (before ++ [CirruList newCursor])) (CirruList (tail after))

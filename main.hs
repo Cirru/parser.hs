@@ -3,7 +3,9 @@ import Cirru
 import Parser
 import Text.JSON
 
-fileName = "./cirru/unfolding.cirru"
+name = "unfolding"
+
+fileName = "./cirru/" ++ name ++ ".cirru"
 
 getJSON :: CirruValue -> JSValue
 getJSON (CirruToken text _ _ _ _ _) = JSString (toJSString text)
@@ -13,5 +15,5 @@ main :: IO()
 main = do
   code <- readFile fileName
   let json = encode $ getJSON $ resolveComma $ resolveDollar (parse code fileName)
-  writeFile "ast/unfolding.json" json
+  writeFile ("ast/" ++ name ++ ".json") json
   --putStrLn (show (parse code fileName))
