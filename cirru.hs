@@ -10,8 +10,17 @@ module Cirru
 , resolveComma
 ) where
 
+import Data.Text (pack, unpack)
+import Data.Aeson.Types (Array)
 import Data.List
+import qualified Data.Vector as V
 import Debug.Trace
+import Data.Aeson
+import Data.Traversable (traverse)
+import Data.Foldable (toList)
+import Control.Applicative
+
+-- Buffer
 
 data CirruBuffer = CirruBuffer { bText :: String
                                , bX    :: Integer
@@ -21,11 +30,24 @@ data CirruBuffer = CirruBuffer { bText :: String
 instance Show CirruBuffer where
   show (CirruBuffer text _ _) = text
 
+-- Short Value
+
 data CrValue = CrList [CrValue] | CrString String
 
 instance Show CrValue where
   show (CrString a) = a
   show (CrList a) = "[" ++ (intercalate "," (map show a)) ++"]"
+
+instance FromJSON CrValue where
+  parseJSON v =
+        withText "CrString" (pure . CrString . unpack) v
+    <|> withArray "CrList" (\a -> CrList . toList <$> traverse parseJSON a) v
+
+instance ToJSON CrValue where
+  toJSON (CrString text) = String $ pack text
+  toJSON (CrList list) = Array $ V.fromList (map toJSON list)
+
+-- Value
 
 data CirruValue = CirruList [CirruValue] | CirruToken { tText :: String
                                                       , tX    :: Integer
@@ -38,6 +60,12 @@ data CirruValue = CirruList [CirruValue] | CirruToken { tText :: String
 instance Show CirruValue where
   show (CirruToken text _ _ _ _ _) = text
   show (CirruList a) = "{" ++ (intercalate "," (map show a)) ++ "}"
+
+instance ToJSON CirruValue where
+  toJSON (CirruToken text _ _ _ _ _) = String (pack text)
+  toJSON (CirruList list) = Array $ V.fromList (map toJSON list)
+
+-- State
 
 data CirruState = CirruState { sName     :: String
                              , sX        :: Integer
@@ -52,6 +80,8 @@ data CirruState = CirruState { sName     :: String
 instance Show CirruState where
   show (CirruState name x y level indent indented nest path) =
     name ++ " l:" ++ (show level) ++ " i:" ++ (show indent) ++ "," ++ (show indented) ++ " " ++ (show nest)
+
+-- Manipulations
 
 appendItem :: CirruValue -> Integer -> CirruValue -> CirruValue
 appendItem (CirruToken _ _ _ _ _ _) _ _ = error "can not append to token"

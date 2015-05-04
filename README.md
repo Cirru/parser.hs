@@ -10,8 +10,6 @@ Test:
 
 ```bash
 runghc main.hs
-cirru-script pretty.cirru
-cirru-script compare.cirru
 ```
 
 ### License
