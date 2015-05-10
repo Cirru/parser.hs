@@ -1,5 +1,5 @@
 
-module Parser
+module CirruParser
 ( parse
 , pare
 ) where

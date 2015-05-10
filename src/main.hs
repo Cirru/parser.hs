@@ -1,6 +1,6 @@
 
 import Cirru
-import Parser
+import CirruParser
 
 import Data.Aeson
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -20,8 +20,8 @@ names = [ "comma"
 
 testFile :: String -> IO ()
 testFile name = do
-  let fileName = "./cirru/" ++ name ++ ".cirru"
-  let astName = "./ast/" ++ name ++ ".json"
+  let fileName = "../cirru/" ++ name ++ ".cirru"
+  let astName = "../ast/" ++ name ++ ".json"
   let config = Pretty.Config {Pretty.confIndent = 2, Pretty.confCompare = mempty}
   code <- readFile fileName
   let cirruData = resolveComma $ resolveDollar (parse code fileName)
